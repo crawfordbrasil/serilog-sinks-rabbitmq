@@ -1,4 +1,4 @@
-namespace Serilog.Sinks.RabbitMQ.Tests.Integration
+﻿namespace Serilog.Sinks.RabbitMQ.Tests.Integration
 {
     using System;
     using System.Text;
@@ -18,17 +18,19 @@ namespace Serilog.Sinks.RabbitMQ.Tests.Integration
     public sealed class RabbitMqSinkTest : IDisposable
     {
         private const string QueueName = "serilog-sink-queue";
-        private const string HostName = "rabbitmq";
+        private const string ExchangeName = "serilog-sink-exchange";
+        private const string ExchangeType = "fanout";
+        private const string HostName = "localhost";
 
         private readonly Logger logger = new LoggerConfiguration()
             .WriteTo.RabbitMQ((clientConfiguration, sinkConfiguration) =>
             {
                 clientConfiguration.Port = 5672;
                 clientConfiguration.DeliveryMode = RabbitMQDeliveryMode.Durable;
-                clientConfiguration.Exchange = "serilog-sink-exchange";
+                clientConfiguration.Exchange = ExchangeName;
+                clientConfiguration.ExchangeType = ExchangeType;
                 clientConfiguration.Username = "guest";
                 clientConfiguration.Password = "guest";
-                clientConfiguration.ExchangeType = "fanout";
                 clientConfiguration.Hostnames.Add(HostName);
                 sinkConfiguration.TextFormatter = new JsonFormatter();
             })
@@ -91,6 +93,10 @@ namespace Serilog.Sinks.RabbitMQ.Tests.Integration
                     {
                         this.connection = factory.CreateConnection();
                         this.channel = this.connection.CreateModel();
+
+                        this.channel.ExchangeDeclare(ExchangeName, ExchangeType);
+                        this.channel.QueueDeclare(QueueName);
+                        this.channel.QueueBind(QueueName, ExchangeName, "🚀");
                         break;
                     }
                     catch (BrokerUnreachableException)

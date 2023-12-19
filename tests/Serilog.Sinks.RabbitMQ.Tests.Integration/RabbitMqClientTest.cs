@@ -1,4 +1,4 @@
-namespace Serilog.Sinks.RabbitMQ.Tests.Integration
+﻿namespace Serilog.Sinks.RabbitMQ.Tests.Integration
 {
     using System;
     using System.Text;
@@ -16,16 +16,18 @@ namespace Serilog.Sinks.RabbitMQ.Tests.Integration
     public sealed class RabbitMqClientTest : IDisposable
     {
         private const string QueueName = "serilog-sink-queue";
-        private const string HostName = "rabbitmq";
+        private const string ExchangeName = "serilog-sink-exchange";
+        private const string ExchangeType = "fanout";
+        private const string HostName = "localhost";
 
         private readonly RabbitMQClient client = new RabbitMQClient(new RabbitMQClientConfiguration
         {
             Port = 5672,
             DeliveryMode = RabbitMQDeliveryMode.Durable,
-            Exchange = "serilog-sink-exchange",
+            Exchange = ExchangeName,
+            ExchangeType = ExchangeType,
             Username = "guest",
             Password = "guest",
-            ExchangeType = "fanout",
             Hostnames = { HostName },
         });
 
@@ -55,7 +57,7 @@ namespace Serilog.Sinks.RabbitMQ.Tests.Integration
                     await Task.Delay(50);
                 });
 
-            var receivedMessage = Encoding.UTF8.GetString(eventRaised.Arguments.ToArray());
+            var receivedMessage = Encoding.UTF8.GetString(eventRaised.Arguments.Body.ToArray());
             Assert.Equal(message, receivedMessage);
         }
 
@@ -80,6 +82,10 @@ namespace Serilog.Sinks.RabbitMQ.Tests.Integration
                     {
                         this.connection = factory.CreateConnection();
                         this.channel = this.connection.CreateModel();
+
+                        this.channel.ExchangeDeclare(ExchangeName, ExchangeType);
+                        this.channel.QueueDeclare(QueueName);
+                        this.channel.QueueBind(QueueName, ExchangeName, "🚀");
                         break;
                     }
                     catch (BrokerUnreachableException)
